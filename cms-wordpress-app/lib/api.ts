@@ -14,7 +14,7 @@ async function fetchAPI(query = "", { variables }: Record<string, any> = {}) {
     method: "POST",
     body: JSON.stringify({
       query,
-      variables,
+      // variables,
     }),
   });
 
