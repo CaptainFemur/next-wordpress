@@ -35,8 +35,6 @@ services:
             - ./cms-wordpress-app:/usr/src/app
         command: sh -c "npm install && npm run dev"
         user: node
-        environment: 
-            - LOCAL_DOMAIN=wp/
         depends_on:
             - wp
         ports:
