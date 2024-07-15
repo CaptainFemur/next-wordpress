@@ -2,21 +2,20 @@ version: '3'
 services:
     wp:
         build: .docker
+        volumes:
+            - ./.docker/conf/php/php.ini:/usr/local/etc/php/conf.d/php.ini
+            - ./wordpress:/var/www/app
+            - .docker/volumes/mu-plugins/mailhog.php:/var/www/app/web/app/mu-plugins/mailhog.php
+            - .docker/volumes/wp-graphql:/var/www/app/web/app/plugins/wp-graphql
         ports:
             - "8000:80"
-        environment:
-            - WORDPRESS_DB_HOST=db
-            - WORDPRESS_DB_USER=root
-            - WORDPRESS_DB_PASSWORD=
-            - WORDPRESS_DB_NAME=wordpress
-            - WORDPRESS_TABLE_PREFIX=wp_
-            - WORDPRESS_DEBUG=1
         depends_on:
             - db
-        volumes:
-            - .docker/volumes/mu-plugins/mailhog.php:/var/www/html/wp-content/mu-plugins/mailhog.php
-            - .docker/volumes/wp-graphql:/var/www/html/wp-content/plugins/wp-graphql
         user: www-data
+        dns:
+            - 8.8.8.8
+            - 208.67.222.222
+            - 1.1.1.1
     db:
         image: mysql:5
         ports:

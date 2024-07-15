@@ -1,0 +1,29 @@
+# Application
+wordpress/web/app/plugins/*
+!wordpress/web/app/plugins/.gitkeep
+wordpress/web/app/mu-plugins/*/
+wordpress/web/app/upgrade
+wordpress/web/app/uploads/*
+!wordpress/web/app/uploads/.gitkeep
+wordpress/web/app/cache/*
+!wordpress/web/app/cache/.gitkeep
+
+# WordPress
+wordpress/web/wp
+wordpress/web/.htaccess
+wordpress/web/app/wflogs/
+wordpress/web/.htpasswd
+wordpress/web/app/shield
+wordpress/web/imagify-backup
+
+
+# Dotenv
+wordpress/.env
+wordpress/.env.*
+!wordpress/.env.example
+
+# Composer
+wordpress/vendor
+
+# Docker
+.docker/.ssh/id_rsa

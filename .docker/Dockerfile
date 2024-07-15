@@ -1,11 +1,55 @@
-FROM wordpress:php8.2-apache  
+# Dockerfile
+FROM php:8.3-apache
 
-# COPY ./wp-config.php /var/www/html/wp-config.php
-COPY ./php.ini /usr/local/etc/php/php.ini
+# Droits d'écriture pour www-data
+RUN usermod -u 1000 www-data
+RUN usermod -a -G www-data www-data
+RUN usermod -a -G www-data root
+RUN chmod -R 777 /var/www/
+
+ENV COMPOSER_ALLOW_SUPERUSER=1
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+RUN composer --version
 
 RUN apt-get update -qq && \
     apt-get install -qy \
     git \
-    nano
+    gnupg \
+    unzip \
+    zip 
+RUN docker-php-ext-install -j$(nproc) opcache pdo_mysql mysqli
 
-EXPOSE 8000
+# Install imagick pour le redimensionement d'images
+RUN apt-get install -y libmagickwand-dev --no-install-recommends && rm -rf /var/lib/apt/lists/*
+RUN printf "\n" | pecl install imagick
+RUN docker-php-ext-enable imagick
+
+COPY conf/apache/000-default.conf /etc/apache2/sites-available/000-default.conf
+
+# activer mod_rewrite et mod_header
+RUN a2enmod rewrite
+RUN a2enmod headers
+
+# Mise en forme des erreurs et var_dump()
+RUN pecl install xdebug
+RUN docker-php-ext-enable xdebug 
+
+
+# install GD pour le traitement des images
+RUN apt-get install -y zlib1g-dev libpng-dev libfreetype6-dev libjpeg62-turbo-dev
+RUN docker-php-ext-configure gd --with-jpeg \
+    && docker-php-ext-install -j "$(nproc)" gd
+
+# Copie des clés RSA pour autoriser composer à se connecter à Github
+COPY .ssh/id_rsa /var/www/.ssh/id_rsa
+RUN chown -R www-data:www-data /var/www/.ssh
+RUN chmod 400 /var/www/.ssh/id_rsa
+
+# Les alias
+COPY .bashrc /var/www/.bashrc
+RUN chown www-data:www-data /var/www/.bashrc
+
+# ajout du .htaccess pour ne pas avoir des 404 partout
+ADD conf/.htaccess /var/www/app/web/.htaccess
+
+WORKDIR /var/www/app
