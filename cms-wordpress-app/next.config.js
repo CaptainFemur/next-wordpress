@@ -19,6 +19,12 @@ module.exports = {
         port,
         pathname: `${pathname}/**`,
       },
+      {
+        protocol: 'http',
+        hostname: '0.gravatar.com',
+        port: '',
+        pathname: '/avatar/**',
+      },
     ],
   },
 };
