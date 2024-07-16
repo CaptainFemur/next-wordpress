@@ -16,6 +16,7 @@ services:
         volumes:
             - .docker/volumes/mu-plugins/mailhog.php:/var/www/html/wp-content/mu-plugins/mailhog.php
             - .docker/volumes/wp-graphql:/var/www/html/wp-content/plugins/wp-graphql
+            - ./next-presso:/var/www/html/wp-content/themes/next-presso
     db:
         image: mysql:5
         ports:
