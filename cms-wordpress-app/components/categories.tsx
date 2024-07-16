@@ -1,4 +1,5 @@
 export default function Categories({ categories }) {
+  if(categories === undefined) return null;
   return (
     <span className="ml-1">
       under

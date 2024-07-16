@@ -1,7 +1,5 @@
 const API_URL = process.env.WORDPRESS_API_URL;
 
-console.debug('WORDPRESS', API_URL);
-
 async function fetchAPI(query = "", { variables }: Record<string, any> = {}) {
   const headers = { "Content-Type": "application/json" };
 
@@ -46,6 +44,25 @@ export async function getPreviewPost(id, idType = "DATABASE_ID") {
   return data.post;
 }
 
+//Todo pas sûr
+export async function getPreviewPage(id, idType = "DATABASE_ID") {
+  const data = await fetchAPI(
+    `
+    query PreviewPage($id: ID!, $idType: PageIdType!) {
+      page(id: $id, idType: $idType) {
+        databaseId
+        slug
+        status
+      }
+    }`,
+    {
+      variables: { id, idType },
+    },
+  );
+  return data.page;
+}
+
+
 export async function getAllPostsWithSlug() {
   const data = await fetchAPI(`
     {
@@ -59,6 +76,21 @@ export async function getAllPostsWithSlug() {
     }
   `);
   return data?.posts;
+}
+
+export async function getAllPagesWithSlug() {
+  const data = await fetchAPI(`
+    {
+      pages(first: 10000) {
+        edges {
+          node {
+            slug
+          }
+        }
+      }
+    }
+  `);
+  return data?.pages;
 }
 
 export async function getAllPostsForHome(preview) {
@@ -101,6 +133,47 @@ export async function getAllPostsForHome(preview) {
   );
 
   return data?.posts;
+}
+
+export async function getAllPagesForHome(preview) {
+  const data = await fetchAPI(
+    `
+    query AllPages {
+      pages(first: 20, where: { orderby: { field: DATE, order: DESC } }) {
+        edges {
+          node {
+            title
+            slug
+            date
+            featuredImage {
+              node {
+                sourceUrl
+              }
+            }
+            author {
+              node {
+                name
+                firstName
+                lastName
+                avatar {
+                  url
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  `,
+    {
+      variables: {
+        onlyEnabled: !preview,
+        preview,
+      },
+    },
+  );
+
+  return data?.pages;
 }
 
 export async function getPostAndMorePosts(slug, preview, previewData) {
@@ -209,6 +282,99 @@ export async function getPostAndMorePosts(slug, preview, previewData) {
   data.posts.edges = data.posts.edges.filter(({ node }) => node.slug !== slug);
   // If there are still 3 posts, remove the last one
   if (data.posts.edges.length > 2) data.posts.edges.pop();
+
+  return data;
+}
+
+export async function getPageAndMorePages(slug, preview, previewData) {
+  const pagePreview = preview && previewData?.page;
+  // The slug may be the id of an unpublished post
+  const isId = Number.isInteger(Number(slug));
+  const isSamePage = isId
+    ? Number(slug) === pagePreview.id
+    : slug === pagePreview.slug;
+  const isDraft = isSamePage && pagePreview?.status === "draft";
+  const isRevision = isSamePage && pagePreview?.status === "publish";
+  const data = await fetchAPI(
+    `
+    fragment AuthorFields on User {
+      name
+      firstName
+      lastName
+      avatar {
+        url
+      }
+    }
+    fragment PageFields on Page {
+      title
+      slug
+      date
+      featuredImage {
+        node {
+          sourceUrl
+        }
+      }
+      author {
+        node {
+          ...AuthorFields
+        }
+      }
+    }
+    query PageBySlug($id: String!) {
+      pageBy(uri: $id) {
+        ...PageFields
+        content
+        ${
+          // Only some of the fields of a revision are considered as there are some inconsistencies
+          isRevision
+            ? `
+        revisions(first: 1, where: { orderby: { field: MODIFIED, order: DESC } }) {
+          edges {
+            node {
+              title
+              content
+              author {
+                node {
+                  ...AuthorFields
+                }
+              }
+            }
+          }
+        }
+        `
+            : ""
+        }
+      }
+      pages(first: 3, where: { orderby: { field: DATE, order: DESC } }) {
+        edges {
+          node {
+            ...PageFields
+          }
+        }
+      }
+    }
+  `,
+    {
+      variables: {
+        id: isDraft ? pagePreview.id : slug
+      },
+    },
+  );
+
+  // Draft pages may not have an slug
+  if (isDraft) data.pageBy.slug = pagePreview.id;
+  // Apply a revision (changes in a published page)
+  if (isRevision && data.pageBy.revisions) {
+    const revision = data.pageBy.revisions.edges[0]?.node;
+
+    if (revision) Object.assign(data.pageBy, revision);
+    delete data.pageBy.revisions;
+  }
+
+  // Filter out the main page
+  data.pages.edges = data.pages.edges.filter(({ node }) => node.slug !== slug);
+  // If there are still 3 pages, remove the last one
+  if (data.pages.edges.length > 2) data.pages.edges.pop();
 
   return data;
 }
