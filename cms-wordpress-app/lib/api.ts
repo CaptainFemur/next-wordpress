@@ -18,6 +18,7 @@ async function fetchAPI(query = "", { variables }: Record<string, any> = {}) {
       query,
       variables,
     }),
+    next: { revalidate: 10 }
   });
 
   const json = await res.json();
