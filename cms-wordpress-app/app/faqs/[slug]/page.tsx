@@ -8,12 +8,12 @@ import SectionSeparator from "../../../components/section-separator";
 import Layout from "../../../components/layout";
 import PostTitle from "../../../components/post-title";
 import { Suspense } from "react";
-import { getAllPagesWithSlug, getPageAndMorePages } from "../../../lib/api";
+import { getAllFAQsWithSlug, getFAQAndMoreFAQs } from "../../../lib/api";
 import { CMS_NAME } from "../../../lib/constants";
 
-export default async function Page({ params, preview, previewData }) {
-    const {pages, page}  = await getInitialPages({ params, preview, previewData });
-    const morePages = pages?.edges;
+export default async function FAQ({ params, preview, previewData }) {
+    const {faqs, faq}  = await getInitialFAQs({ params, preview, previewData });
+    const moreFAQs = faqs?.edges;
 
     return (
     <Layout preview={preview}>
@@ -26,24 +26,24 @@ export default async function Page({ params, preview, previewData }) {
                     <article>
                         <Head>
                             <title>
-                            {`${page.title} | Next.js Blog Example with ${CMS_NAME}`}
+                            {`${faq.title} | Next.js Blog Example with ${CMS_NAME}`}
                             </title>
                             <meta
                             property="og:image"
-                            content={page.featuredImage?.node.sourceUrl}
+                            content={faq.featuredImage?.node.sourceUrl}
                             />
                         </Head>
                         <PostHeader
-                            title={page.title}
-                            coverImage={page.featuredImage}
-                            date={page.date}
-                            author={page.author}
+                            title={faq.title}
+                            coverImage={faq.featuredImage}
+                            date={faq.date}
+                            author={faq.author}
                         />
-                        <PostBody content={page.content} />
+                        <PostBody content={faq.content} />
                     </article>
                     <SectionSeparator />
                     {
-                        morePages.length > 0 && <MoreStories type="pages" posts={morePages} />
+                        moreFAQs.length > 0 && <MoreStories type="faqs" posts={moreFAQs} />
                     }
                 </>
             </Suspense>
@@ -52,23 +52,23 @@ export default async function Page({ params, preview, previewData }) {
     );
 }
 
-export const getInitialPages = async ({
+export const getInitialFAQs = async ({
     params,
     preview = false,
     previewData,
   }) => {
-    const data = await getPageAndMorePages(params?.slug, preview, previewData);
-  
+    const data = await getFAQAndMoreFAQs(params?.slug, preview, previewData);
+    console.debug('FAQS', data);
     return {
         preview,
-        page: data.pageBy,
-        pages: data.pages,
+        faq: data.faqBy,
+        faqs: data.faqs,
       };
 };
   
 
 export async function generateStaticParams() {
-  const allPages = await getAllPagesWithSlug();
+  const allPages = await getAllFAQsWithSlug();
 
-  return allPages.edges.map(({ node }) => `/pages/${node.slug}`) || []
+  return allPages.edges.map(({ node }) => `/faqs/${node.slug}`) || []
 };

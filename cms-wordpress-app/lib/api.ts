@@ -93,6 +93,22 @@ export async function getAllPagesWithSlug() {
   return data?.pages;
 }
 
+export async function getAllFAQsWithSlug() {
+  const data = await fetchAPI(`
+    {
+      faqs(first: 10000) {
+        edges {
+          node {
+            slug
+          }
+        }
+      }
+    }
+  `);
+  return data?.faqs;
+}
+
+
 export async function getAllPostsForHome(preview) {
   const data = await fetchAPI(
     `
@@ -135,46 +151,46 @@ export async function getAllPostsForHome(preview) {
   return data?.posts;
 }
 
-export async function getAllPagesForHome(preview) {
-  const data = await fetchAPI(
-    `
-    query AllPages {
-      pages(first: 20, where: { orderby: { field: DATE, order: DESC } }) {
-        edges {
-          node {
-            title
-            slug
-            date
-            featuredImage {
-              node {
-                sourceUrl
-              }
-            }
-            author {
-              node {
-                name
-                firstName
-                lastName
-                avatar {
-                  url
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  `,
-    {
-      variables: {
-        onlyEnabled: !preview,
-        preview,
-      },
-    },
-  );
-
-  return data?.pages;
-}
+// export async function getAllPagesForHome(preview) {
+//   const data = await fetchAPI(
+//     `
+//     query AllPages {
+//       pages(first: 20, where: { orderby: { field: DATE, order: DESC } }) {
+//         edges {
+//           node {
+//             title
+//             slug
+//             date
+//             featuredImage {
+//               node {
+//                 sourceUrl
+//               }
+//             }
+//             author {
+//               node {
+//                 name
+//                 firstName
+//                 lastName
+//                 avatar {
+//                   url
+//                 }
+//               }
+//             }
+//           }
+//         }
+//       }
+//     }
+//   `,
+//     {
+//       variables: {
+//         onlyEnabled: !preview,
+//         preview,
+//       },
+//     },
+//   );
+// 
+//   return data?.pages;
+// }
 
 export async function getPostAndMorePosts(slug, preview, previewData) {
   const postPreview = preview && previewData?.post;
@@ -375,6 +391,102 @@ export async function getPageAndMorePages(slug, preview, previewData) {
   data.pages.edges = data.pages.edges.filter(({ node }) => node.slug !== slug);
   // If there are still 3 pages, remove the last one
   if (data.pages.edges.length > 2) data.pages.edges.pop();
+
+  return data;
+}
+
+export async function getFAQAndMoreFAQs(slug, preview, previewData) {
+  const faqPreview = preview && previewData?.faq;
+  // The slug may be the id of an unpublished faq
+  const isId = Number.isInteger(Number(slug));
+  const isSamePost = isId
+    ? Number(slug) === faqPreview.id
+    : slug === faqPreview.slug;
+  const isDraft = isSamePost && faqPreview?.status === "draft";
+  const isRevision = isSamePost && faqPreview?.status === "publish";
+  const data = await fetchAPI(
+    `
+    fragment AuthorFields on User {
+      name
+      firstName
+      lastName
+      avatar {
+        url
+      }
+    }
+    fragment FaqFields on Faq {
+      title
+      slug
+      date
+      excerpt
+      featuredImage {
+        node {
+          sourceUrl
+        }
+      }
+      author {
+        node {
+          ...AuthorFields
+        }
+      }
+    }
+    query FaqBySlug($id: String!) {
+      faqBy(uri: $id) {
+        ...FaqFields
+        content
+        ${
+          // Only some of the fields of a revision are considered as there are some inconsistencies
+          isRevision
+            ? `
+        revisions(first: 1, where: { orderby: { field: MODIFIED, order: DESC } }) {
+          edges {
+            node {
+              title
+              excerpt
+              content
+              author {
+                node {
+                  ...AuthorFields
+                }
+              }
+            }
+          }
+        }
+        `
+            : ""
+        }
+      }
+      faqs(first: 3, where: { orderby: { field: DATE, order: DESC } }) {
+        edges {
+          node {
+            ...FaqFields
+          }
+        }
+      }
+    }
+  `,
+    {
+      variables: {
+        id: isDraft ? faqPreview.id : slug,
+        idType: isDraft ? "DATABASE_ID" : "SLUG",
+      },
+    },
+  );
+
+  // Draft faqs may not have an slug
+  if (isDraft) data.faq.slug = faqPreview.id;
+  // Apply a revision (changes in a published faq)
+  if (isRevision && data.faq.revisions) {
+    const revision = data.faq.revisions.edges[0]?.node;
+
+    if (revision) Object.assign(data.faq, revision);
+    delete data.faq.revisions;
+  }
+
+  // Filter out the main faq
+  data.faqs.edges = data.faqs.edges.filter(({ node }) => node.slug !== slug);
+  // If there are still 3 faqs, remove the last one
+  if (data.faqs.edges.length > 2) data.faqs.edges.pop();
 
   return data;
 }
