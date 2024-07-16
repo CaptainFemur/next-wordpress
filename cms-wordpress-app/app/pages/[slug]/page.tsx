@@ -16,8 +16,6 @@ export default async function Post({ params, preview, previewData }) {
     const {pages, page}  = await getInitialPages({ params, preview, previewData });
     const morePages = pages?.edges;
 
-    console.debug('NTM', page);
-
     return (
     <Layout preview={preview}>
         <Container>

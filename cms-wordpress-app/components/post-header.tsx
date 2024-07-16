@@ -9,7 +9,7 @@ export default function PostHeader({
   coverImage,
   date,
   author,
-  categories,
+  categories = null,
 }) {
   return (
     <>

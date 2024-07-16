@@ -1,5 +1,5 @@
-export default function Categories({ categories }) {
-  if(categories === undefined) return null;
+export default function Categories({ categories = null }) {
+  if(categories === null) return null;
   return (
     <span className="ml-1">
       under
